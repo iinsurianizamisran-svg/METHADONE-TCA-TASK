@@ -15,6 +15,7 @@ interface PatientsProtocolViewProps {
   activePatientId: string;
   onSelectAndOpenSession: (patientId: string) => void;
   onRegisterPatient: (patient: Omit<Patient, 'id'>) => void;
+  onOpenDedicatedRegister?: () => void;
   onUpdatePatientPhase: (
     patientId: string,
     phase: ProtocolPhase,
@@ -30,6 +31,7 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
   activePatientId,
   onSelectAndOpenSession,
   onRegisterPatient,
+  onOpenDedicatedRegister,
   onUpdatePatientPhase,
   initialShowForm = false,
 }) => {
@@ -148,12 +150,46 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => setShowRegisterForm((prev) => !prev)}
+            onClick={() => {
+              if (onOpenDedicatedRegister) {
+                onOpenDedicatedRegister();
+              } else {
+                setShowRegisterForm((prev) => !prev);
+              }
+            }}
             className="inline-flex items-center justify-center gap-2 min-h-[42px] px-4 py-2 text-sm font-medium text-white bg-teal-700 rounded-lg hover:bg-teal-800 transition-colors whitespace-nowrap shrink-0"
           >
             <UserPlus className="w-4 h-4" aria-hidden="true" />
-            {showRegisterForm ? 'Tutup Borang Daftar' : 'Daftar Pesakit Baharu'}
+            Daftar Pesakit Baharu
           </button>
+        </div>
+
+        {/* 4-Column Cohort Summary Strip */}
+        <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <div className="text-xs text-slate-500">Jumlah Pesakit Berdaftar</div>
+            <div className="mt-1 text-2xl font-bold text-slate-900 font-mono tabular-nums">
+              {patients.length}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Fasa Induksi</div>
+            <div className="mt-1 text-2xl font-bold text-amber-700 font-mono tabular-nums">
+              {patients.filter((p) => p.phase === 'induksi').length}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Fasa Penstabilan</div>
+            <div className="mt-1 text-2xl font-bold text-teal-700 font-mono tabular-nums">
+              {patients.filter((p) => p.phase === 'penstabilan').length}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Fasa Penyelenggaraan</div>
+            <div className="mt-1 text-2xl font-bold text-emerald-700 font-mono tabular-nums">
+              {patients.filter((p) => p.phase === 'penyelenggaraan').length}
+            </div>
+          </div>
         </div>
 
         {/* Registration Form */}
@@ -401,11 +437,11 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600">
-                <th className="py-3 px-4">Pesakit & MRN</th>
-                <th className="py-3 px-4">Fasa Protokol</th>
+                <th className="py-3 px-4">Pesakit &amp; Demografik</th>
+                <th className="py-3 px-4">Fasa &amp; Regimen (DOT/DBB)</th>
                 <th className="py-3 px-4 text-right">Dos</th>
                 <th className="py-3 px-4">Tarikh Akan Hadir</th>
-                <th className="py-3 px-4">Julat Urin Automatik</th>
+                <th className="py-3 px-4">Rekod Darah &amp; Julat Urin</th>
                 <th className="py-3 px-4 text-right">Tindakan</th>
               </tr>
             </thead>
@@ -421,6 +457,12 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
                   const win = calculateUrineTestWindow(patient, todayIso);
                   const isEditing = editingPatientId === patient.id;
                   const isActive = patient.id === activePatientId;
+                  const dbbCount = patient.dbbBottles ?? 0;
+                  const dotDays = patient.dotDaysPerWeek ?? (7 - dbbCount);
+                  const regimenLabel =
+                    patient.regimenType === 'dbb' || dbbCount > 0
+                      ? `DOT ${dotDays}h + DBB ${dbbCount} btl`
+                      : `DOT ${dotDays}h (Klinik)`;
 
                   return (
                     <tr
@@ -433,6 +475,10 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
                         <div className="font-semibold text-slate-900">{patient.name}</div>
                         <div className="text-xs text-slate-500 font-mono tabular-nums mt-0.5">
                           {patient.mrn} · {patient.icNumber}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {patient.phone}
+                          {patient.emergencyContactName ? ` · Waris: ${patient.emergencyContactName}` : ''}
                         </div>
                       </td>
 
@@ -459,14 +505,17 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
                             <div className="font-medium text-slate-800">
                               {PROTOCOL_PRESETS[patient.phase].label}
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs font-mono text-teal-800 mt-0.5 whitespace-nowrap">
+                              {regimenLabel}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
                               {DISPENSING_LABELS[patient.dispensingMode]}
                             </div>
                           </div>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                      <td className="py-3.5 px-4 text-right font-mono tabular-nums whitespace-nowrap">
                         {isEditing ? (
                           <input
                             type="number"
@@ -480,14 +529,14 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono tabular-nums text-xs text-slate-700">
+                      <td className="py-3.5 px-4 font-mono tabular-nums text-xs text-slate-700 whitespace-nowrap">
                         <div>{formatDateMY(patient.nextAppointmentDate)}</div>
                         <div className="text-slate-500">Jam {patient.nextAppointmentTime}</div>
                       </td>
 
                       <td className="py-3.5 px-4 font-mono tabular-nums text-xs">
-                        <div className="text-slate-900 font-medium">
-                          {formatDateMY(win.windowStart)} – {formatDateMY(win.windowEnd)}
+                        <div className="text-slate-900 font-medium whitespace-nowrap">
+                          Urin: {formatDateMY(win.windowStart)} – {formatDateMY(win.windowEnd)}
                         </div>
                         <div
                           className={
@@ -503,6 +552,12 @@ export const PatientsProtocolView: React.FC<PatientsProtocolViewProps> = ({
                             : win.status === 'tamat_tempoh'
                             ? 'Tamat tempoh'
                             : `Dalam ${win.daysUntilStart} hari`}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5 whitespace-nowrap">
+                          Darah akhir:{' '}
+                          {patient.lastBloodTestDate
+                            ? formatDateMY(patient.lastBloodTestDate)
+                            : 'Belum direkod'}
                         </div>
                       </td>
 

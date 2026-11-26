@@ -218,8 +218,8 @@ export const DailySummaryView: React.FC<DailySummaryViewProps> = ({
           ) : (
             <ul className="divide-y divide-slate-100 mt-2">
               {report.appointments.map((appt) => (
-                <li key={appt.id} className="py-3 flex items-center justify-between gap-3">
-                  <div>
+                <li key={appt.id} className="py-3 flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-slate-900">{appt.patientName}</div>
                     <div className="text-xs text-slate-500 font-mono tabular-nums mt-0.5">
                       {appt.time} · {appt.mrn} · Dos {appt.doseMg} mg
@@ -227,7 +227,7 @@ export const DailySummaryView: React.FC<DailySummaryViewProps> = ({
                     <div className="text-xs text-slate-600 mt-0.5">{appt.purpose}</div>
                   </div>
                   <span
-                    className={`text-xs font-semibold whitespace-nowrap ${
+                    className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                       appt.status === 'hadir'
                         ? 'text-emerald-700'
                         : appt.status === 'tidak_hadir'
@@ -263,7 +263,7 @@ export const DailySummaryView: React.FC<DailySummaryViewProps> = ({
             <ul className="divide-y divide-slate-100 mt-2">
               {report.tasks.map((task) => (
                 <li key={task.id} className="py-3 flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-slate-900">{task.title}</div>
                     <div className="text-xs text-slate-500 mt-0.5">
                       {task.patientName} <span className="font-mono">({task.mrn})</span>
@@ -271,7 +271,7 @@ export const DailySummaryView: React.FC<DailySummaryViewProps> = ({
                     </div>
                   </div>
                   <span
-                    className={`text-xs font-semibold whitespace-nowrap ${
+                    className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                       task.completed ? 'text-emerald-700' : 'text-amber-700'
                     }`}
                   >

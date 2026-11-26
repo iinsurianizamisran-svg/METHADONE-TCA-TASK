@@ -4,6 +4,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardPlus,
+  Search,
   Trash2,
 } from 'lucide-react';
 import type {
@@ -123,6 +124,7 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
   // Right-side list filter state
   const [listScope, setListScope] = useState<'pesakit_ini' | 'semua'>('pesakit_ini');
   const [typeFilter, setTypeFilter] = useState<'semua' | ManualEntryType>('semua');
+  const [listSearch, setListSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const patientMap = useMemo(
@@ -131,6 +133,7 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
   );
 
   const filteredTasks = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
     return tasks
       .filter((t) => {
         if (listScope === 'pesakit_ini' && selectedPatient && t.patientId !== selectedPatient.id) {
@@ -138,13 +141,19 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
         }
         const effectiveType: ManualEntryType = t.entryType ?? 'tugasan';
         if (typeFilter !== 'semua' && effectiveType !== typeFilter) return false;
+        if (q) {
+          const pName = patientMap.get(t.patientId)?.name.toLowerCase() ?? '';
+          const matchTitle = t.title.toLowerCase().includes(q);
+          const matchOfficer = (t.orderedBy ?? '').toLowerCase().includes(q);
+          if (!matchTitle && !matchOfficer && !pName.includes(q)) return false;
+        }
         return true;
       })
       .sort((a, b) => {
         if (a.completed !== b.completed) return Number(a.completed) - Number(b.completed);
         return a.dueDate.localeCompare(b.dueDate);
       });
-  }, [tasks, listScope, selectedPatient, typeFilter]);
+  }, [tasks, listScope, selectedPatient, typeFilter, listSearch, patientMap]);
 
   const applyTemplate = (tpl: (typeof QUICK_TEMPLATES)[number]) => {
     setEntryType(tpl.entryType);
@@ -239,7 +248,9 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
             <span aria-hidden="true">·</span>
             <span>{PROTOCOL_PRESETS[selectedPatient.phase].label}</span>
             <span aria-hidden="true">·</span>
-            <span className="font-semibold text-slate-900">Dos {selectedPatient.doseMg} mg</span>
+            <span className="font-semibold text-slate-900 whitespace-nowrap">
+              Dos {selectedPatient.doseMg} mg
+            </span>
             <span aria-hidden="true">·</span>
             <span>
               Temujanji Seterusnya:{' '}
@@ -288,85 +299,97 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            {/* Entry Type Segmented Control */}
-            <div>
-              <span className="block text-xs font-medium text-slate-700 mb-1.5">
-                Jenis Rekod / Peringatan
-              </span>
-              <div
-                role="group"
-                aria-label="Pilih jenis rekod atau peringatan"
-                className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-lg"
-              >
-                {(Object.keys(MANUAL_ENTRY_TYPE_LABELS) as ManualEntryType[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setEntryType(key)}
-                    className={`px-2.5 py-2 text-xs font-medium rounded-md transition-colors text-center ${
-                      entryType === key
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {MANUAL_ENTRY_TYPE_LABELS[key]}
-                  </button>
-                ))}
+          <form onSubmit={handleSubmit} className="mt-4 space-y-5">
+            {/* Step 1: Entry Type & Quick Templates */}
+            <div className="space-y-3">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                1. Jenis Peringatan &amp; Templat Pantas
+              </div>
+              <div>
+                <span className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Jenis Rekod / Peringatan
+                </span>
+                <div
+                  role="group"
+                  aria-label="Pilih jenis rekod atau peringatan"
+                  className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-lg"
+                >
+                  {(Object.keys(MANUAL_ENTRY_TYPE_LABELS) as ManualEntryType[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setEntryType(key)}
+                      className={`px-2.5 py-2 text-xs font-medium rounded-md transition-colors text-center ${
+                        entryType === key
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {MANUAL_ENTRY_TYPE_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span className="block text-xs text-slate-500 mb-1.5">
+                  Templat Pantas (Pilihan):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.label}
+                      type="button"
+                      onClick={() => applyTemplate(tpl)}
+                      className="px-2.5 py-1 text-xs font-medium text-teal-800 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors whitespace-nowrap"
+                    >
+                      {tpl.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Quick Clinical Templates */}
-            <div>
-              <span className="block text-xs text-slate-500 mb-1.5">
-                Templat Pantas (Pilihan):
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {QUICK_TEMPLATES.map((tpl) => (
-                  <button
-                    key={tpl.label}
-                    type="button"
-                    onClick={() => applyTemplate(tpl)}
-                    className="px-2.5 py-1 text-xs font-medium text-teal-800 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors whitespace-nowrap"
-                  >
-                    {tpl.label}
-                  </button>
-                ))}
+            {/* Step 2: Details & Instructions */}
+            <div className="pt-4 border-t border-slate-100 space-y-3.5">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                2. Butiran Tugasan, Nota atau Arahan Pegawai
+              </div>
+              <div>
+                <label htmlFor="manual-title" className="block text-xs font-medium text-slate-700 mb-1">
+                  Tajuk Tugasan / Nota / Arahan
+                </label>
+                <input
+                  id="manual-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Cth: Arahan Dr. Hakimah — Semak keputusan darah LFT sebelum naikkan dos"
+                  className="w-full min-h-[42px] px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="manual-details" className="block text-xs font-medium text-slate-700 mb-1">
+                  Butiran Nota Perubatan / Arahan Pegawai Perubatan
+                </label>
+                <textarea
+                  id="manual-details"
+                  rows={3}
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  placeholder="Masukkan arahan terperinci, perhatian dos, atau nota susulan klinikal..."
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white"
+                />
               </div>
             </div>
 
-            {/* Title */}
-            <div>
-              <label htmlFor="manual-title" className="block text-xs font-medium text-slate-700 mb-1">
-                Tajuk Tugasan / Nota / Arahan
-              </label>
-              <input
-                id="manual-title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Cth: Arahan Dr. Hakimah — Semak keputusan darah LFT sebelum naikkan dos"
-                className="w-full min-h-[42px] px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white"
-              />
-            </div>
-
-            {/* Medical Details / Doctor Instructions */}
-            <div>
-              <label htmlFor="manual-details" className="block text-xs font-medium text-slate-700 mb-1">
-                Butiran Nota Perubatan / Arahan Pegawai Perubatan
-              </label>
-              <textarea
-                id="manual-details"
-                rows={3}
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                placeholder="Masukkan arahan terperinci, perhatian dos, atau nota susulan klinikal..."
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white"
-              />
-            </div>
-
-            {/* Date, Time & Quick Date Helpers */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Step 3: Schedule & Cadence */}
+            <div className="pt-4 border-t border-slate-100 space-y-3.5">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                3. Tarikh, Keutamaan &amp; Kekerapan Kalendar
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label htmlFor="manual-date" className="text-xs font-medium text-slate-700">
@@ -507,6 +530,7 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
                   />
                 </div>
               )}
+              </div>
             </div>
 
             {formError && (
@@ -569,23 +593,43 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="manual-list-type-filter" className="sr-only">
-              Tapis mengikut jenis peringatan
-            </label>
-            <select
-              id="manual-list-type-filter"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as 'semua' | ManualEntryType)}
-              className="w-full min-h-[38px] px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
-            >
-              <option value="semua">Semua Jenis (Tugasan, Nota & Arahan)</option>
-              {(Object.keys(MANUAL_ENTRY_TYPE_LABELS) as ManualEntryType[]).map((k) => (
-                <option key={k} value={k}>
-                  {MANUAL_ENTRY_TYPE_LABELS[k]}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="relative">
+              <Search
+                className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <label htmlFor="manual-list-search" className="sr-only">
+                Cari tajuk tugasan atau pegawai
+              </label>
+              <input
+                id="manual-list-search"
+                type="search"
+                value={listSearch}
+                onChange={(e) => setListSearch(e.target.value)}
+                placeholder="Cari tajuk atau pegawai..."
+                className="w-full min-h-[38px] pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="manual-list-type-filter" className="sr-only">
+                Tapis mengikut jenis peringatan
+              </label>
+              <select
+                id="manual-list-type-filter"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as 'semua' | ManualEntryType)}
+                className="w-full min-h-[38px] px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
+              >
+                <option value="semua">Semua Jenis (Tugasan, Nota &amp; Arahan)</option>
+                {(Object.keys(MANUAL_ENTRY_TYPE_LABELS) as ManualEntryType[]).map((k) => (
+                  <option key={k} value={k}>
+                    {MANUAL_ENTRY_TYPE_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {filteredTasks.length === 0 ? (
@@ -593,7 +637,7 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
               Tiada tugasan atau arahan manual sepadan dengan penapis ini.
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto pr-1" data-testid="manual-task-list">
+            <ul className="divide-y divide-slate-100 max-h-[640px] overflow-y-auto pr-1" data-testid="manual-task-list">
               {filteredTasks.map((task) => {
                 const p = patientMap.get(task.patientId);
                 const entryLabel =
@@ -602,8 +646,8 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
 
                 return (
                   <li key={task.id} className="py-3.5 first:pt-1 last:pb-1 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium text-teal-800">
                           {entryLabel}
                           {task.orderedBy ? ` · ${task.orderedBy}` : ''}
@@ -638,7 +682,7 @@ export const ManualTaskModuleView: React.FC<ManualTaskModuleViewProps> = ({
                       </div>
 
                       <span
-                        className={`text-xs font-semibold whitespace-nowrap ${
+                        className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                           task.completed
                             ? 'text-emerald-700'
                             : task.priority === 'segera'

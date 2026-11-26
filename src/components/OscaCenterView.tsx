@@ -370,19 +370,19 @@ export const OscaCenterView: React.FC<OscaCenterViewProps> = ({
                           : 'bg-white hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-slate-900 truncate">
                             {item.patient.name}
                           </div>
                           <div className="text-xs text-slate-500 font-mono tabular-nums mt-0.5">
-                            {item.patient.mrn} · {PROTOCOL_PRESETS[item.patient.phase].label} · Dos{' '}
-                            {item.patient.doseMg} mg
+                            {item.patient.mrn} · {PROTOCOL_PRESETS[item.patient.phase].label} ·{' '}
+                            <span className="whitespace-nowrap">Dos {item.patient.doseMg} mg</span>
                           </div>
                         </div>
 
                         <span
-                          className={`text-xs font-semibold whitespace-nowrap ${
+                          className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                             item.riskLevel === 'tinggi'
                               ? 'text-red-700'
                               : item.riskLevel === 'pemantauan'
@@ -724,8 +724,8 @@ export const OscaCenterView: React.FC<OscaCenterViewProps> = ({
                     const isConfirmDel = confirmDeleteId === rec.id;
                     return (
                       <li key={rec.id} className="p-4 space-y-2.5">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
                             <div className="text-xs font-medium text-teal-800">
                               {OSCA_DOMAIN_LABELS[rec.serviceDomain]} · {rec.agencyOrOfficer}
                             </div>
@@ -749,7 +749,7 @@ export const OscaCenterView: React.FC<OscaCenterViewProps> = ({
                           </div>
 
                           <span
-                            className={`text-xs font-semibold whitespace-nowrap ${
+                            className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                               rec.status === 'selesai' ? 'text-emerald-700' : 'text-amber-700'
                             }`}
                           >

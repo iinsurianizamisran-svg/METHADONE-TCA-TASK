@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CalendarDashboardView } from './components/CalendarDashboardView';
 import { ClinicalSessionView } from './components/ClinicalSessionView';
+import { DaftarPesakitView } from './components/DaftarPesakitView';
 import { DailySummaryView } from './components/DailySummaryView';
 import { FrontpageEntryView } from './components/FrontpageEntryView';
 import { ManualTaskModuleView } from './components/ManualTaskModuleView';
@@ -56,6 +57,7 @@ type ActiveTab =
   | 'sesi'
   | 'urin'
   | 'osca'
+  | 'daftar_pesakit'
   | 'pesakit'
   | 'laporan';
 
@@ -67,6 +69,7 @@ const TAB_BREADCRUMBS: Record<ActiveTab, string> = {
   sesi: 'Sesi Klinikal',
   urin: 'Ujian Urin',
   osca: 'OSCA (One Stop Center)',
+  daftar_pesakit: 'Daftar Pesakit Baharu',
   pesakit: 'Pesakit & Protokol',
   laporan: 'Laporan Harian',
 };
@@ -476,8 +479,12 @@ export default function App() {
     }));
   };
 
-  const handleRegisterPatient = (patientInput: Omit<Patient, 'id'>) => {
-    const newId = `pat-${Date.now()}`;
+  const handleRegisterPatient = (
+    patientInput: Omit<Patient, 'id'>,
+    enrollInOsca = false
+  ): string => {
+    const ts = Date.now();
+    const newId = `pat-${ts}`;
     const newPatient: Patient = {
       ...patientInput,
       id: newId,
@@ -487,8 +494,22 @@ export default function App() {
       newPatient.nextAppointmentDate
     ).map((t, idx) => ({
       ...t,
-      id: `task-${Date.now()}-${idx}`,
+      id: `task-${ts}-${idx}`,
     }));
+
+    const initialOscaRecord: OscaInterventionRecord | null = enrollInOsca
+      ? {
+          id: `osca-${ts}`,
+          patientId: newId,
+          serviceDomain: 'saringan_kesihatan',
+          riskLevel: newPatient.phase === 'induksi' ? 'pemantauan' : 'stabil',
+          actionDate: newPatient.startDate,
+          title: 'Orientasi Awal OSCA & Semakan Saringan Kesihatan',
+          planNote: `Kemasukan baharu ${PROTOCOL_PRESETS[newPatient.phase].label} (${newPatient.doseMg} mg). Sahkan status ujian darah, urin, dan keperluan sokongan psikososial.`,
+          agencyOrOfficer: newPatient.prescribingDoctor || 'Pasukan OSCA Klinik',
+          status: 'aktif',
+        }
+      : null;
 
     setStore((prev) => ({
       ...prev,
@@ -496,7 +517,7 @@ export default function App() {
       activePatientId: newId,
       appointments: [
         {
-          id: `appt-${Date.now()}`,
+          id: `appt-${ts}`,
           patientId: newId,
           date: newPatient.nextAppointmentDate,
           time: newPatient.nextAppointmentTime,
@@ -506,8 +527,10 @@ export default function App() {
         ...prev.appointments,
       ],
       tasks: [...defaultTasks, ...prev.tasks],
+      oscaRecords: initialOscaRecord ? [initialOscaRecord, ...prev.oscaRecords] : prev.oscaRecords,
     }));
     setOpenRegisterOnPatientsTab(false);
+    return newId;
   };
 
   const handleUpdatePatientPhase = (
@@ -627,20 +650,6 @@ export default function App() {
     }));
   };
 
-  const navItems: Array<{
-    key: ActiveTab;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }> = [
-    { key: 'dashboard', label: 'Dashboard Kalendar', icon: CalendarDays },
-    { key: 'tugasan_manual', label: 'Tugasan Manual', icon: ClipboardPlus },
-    { key: 'sesi', label: 'Sesi Klinikal', icon: ClipboardList },
-    { key: 'urin', label: 'Ujian Urin', icon: FlaskConical },
-    { key: 'osca', label: 'OSCA', icon: HeartHandshake },
-    { key: 'pesakit', label: 'Pesakit & Protokol', icon: Users },
-    { key: 'laporan', label: 'Laporan Harian', icon: FileBarChart2 },
-  ];
-
   const frontpageCounts = useMemo(() => {
     const todayAppointmentsCount = store.appointments.filter((a) => a.date === todayIso).length;
     const pendingTasksCount = store.tasks.filter((t) => !t.completed).length;
@@ -653,6 +662,48 @@ export default function App() {
       activeUrineWindowsCount,
     };
   }, [store.appointments, store.tasks, store.patients, todayIso]);
+
+  const navGroups: Array<{
+    groupLabel: string;
+    items: Array<{
+      key: ActiveTab;
+      label: string;
+      icon: React.ComponentType<{ className?: string }>;
+      count?: number;
+    }>;
+  }> = [
+    {
+      groupLabel: 'Operasi Harian',
+      items: [
+        { key: 'dashboard', label: 'Dashboard Kalendar', icon: CalendarDays },
+        { key: 'sesi', label: 'Sesi Klinikal', icon: ClipboardList },
+        {
+          key: 'tugasan_manual',
+          label: 'Tugasan Manual',
+          icon: ClipboardPlus,
+          count: frontpageCounts.pendingTasksCount,
+        },
+      ],
+    },
+    {
+      groupLabel: 'Rawatan & Bersepadu',
+      items: [
+        {
+          key: 'urin',
+          label: 'Ujian Urin',
+          icon: FlaskConical,
+          count: frontpageCounts.activeUrineWindowsCount,
+        },
+        { key: 'osca', label: 'OSCA', icon: HeartHandshake },
+        { key: 'daftar_pesakit', label: 'Daftar Pesakit', icon: UserPlus },
+        { key: 'pesakit', label: 'Pesakit & Protokol', icon: Users },
+      ],
+    },
+    {
+      groupLabel: 'Dokumentasi',
+      items: [{ key: 'laporan', label: 'Laporan Harian', icon: FileBarChart2 }],
+    },
+  ];
 
   if (!isEntered) {
     return (
@@ -680,30 +731,48 @@ export default function App() {
           </span>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = activeTab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => {
-                  setActiveTab(item.key);
-                  setOpenRegisterOnPatientsTab(false);
-                }}
-                aria-current={active ? 'page' : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                  active
-                    ? 'bg-teal-50 text-teal-800'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+        <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+          {navGroups.map((group) => (
+            <div key={group.groupLabel} className="space-y-1">
+              <div className="px-3 pt-1 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                {group.groupLabel}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = activeTab === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.key);
+                      setOpenRegisterOnPatientsTab(false);
+                    }}
+                    aria-current={active ? 'page' : undefined}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
+                      active
+                        ? 'bg-teal-50 text-teal-800'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3 min-w-0">
+                      <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{item.label}</span>
+                    </span>
+                    {typeof item.count === 'number' && item.count > 0 && (
+                      <span
+                        className={`text-xs font-mono tabular-nums shrink-0 ${
+                          active ? 'text-teal-700 font-semibold' : 'text-slate-400'
+                        }`}
+                      >
+                        {item.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="p-4 border-t border-slate-200 space-y-3">
@@ -742,30 +811,44 @@ export default function App() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <nav className="flex-1 p-3 space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const active = activeTab === item.key;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(item.key);
-                      setMobileMenuOpen(false);
-                      setOpenRegisterOnPatientsTab(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap ${
-                      active
-                        ? 'bg-teal-50 text-teal-800'
-                        : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+            <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+              {navGroups.map((group) => (
+                <div key={group.groupLabel} className="space-y-1">
+                  <div className="px-3 pt-1 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    {group.groupLabel}
+                  </div>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = activeTab === item.key;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(item.key);
+                          setMobileMenuOpen(false);
+                          setOpenRegisterOnPatientsTab(false);
+                        }}
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap ${
+                          active
+                            ? 'bg-teal-50 text-teal-800'
+                            : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-3 min-w-0">
+                          <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                          <span className="truncate">{item.label}</span>
+                        </span>
+                        {typeof item.count === 'number' && item.count > 0 && (
+                          <span className="text-xs font-mono tabular-nums text-slate-400 shrink-0">
+                            {item.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </nav>
 
             <div className="p-4 border-t border-slate-200 space-y-3">
@@ -829,8 +912,8 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                setActiveTab('pesakit');
-                setOpenRegisterOnPatientsTab(true);
+                setActiveTab('daftar_pesakit');
+                setOpenRegisterOnPatientsTab(false);
               }}
               className="inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 text-xs font-medium text-white bg-teal-700 rounded-lg hover:bg-teal-800 transition-colors whitespace-nowrap shrink-0"
             >
@@ -870,7 +953,7 @@ export default function App() {
           </div>
         )}
 
-        <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
           {activeTab === 'dashboard' && (
             <CalendarDashboardView
               todayIso={todayIso}
@@ -986,6 +1069,19 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'daftar_pesakit' && (
+            <DaftarPesakitView
+              todayIso={todayIso}
+              patientsCount={store.patients.length}
+              onRegisterPatient={handleRegisterPatient}
+              onOpenPatientSession={(patientId) => {
+                setStore((prev) => ({ ...prev, activePatientId: patientId }));
+                setActiveTab('sesi');
+              }}
+              onOpenRosterTab={() => setActiveTab('pesakit')}
+            />
+          )}
+
           {activeTab === 'pesakit' && (
             <PatientsProtocolView
               todayIso={todayIso}
@@ -995,7 +1091,10 @@ export default function App() {
                 setStore((prev) => ({ ...prev, activePatientId: id }));
                 setActiveTab('sesi');
               }}
-              onRegisterPatient={handleRegisterPatient}
+              onRegisterPatient={(patient) => {
+                handleRegisterPatient(patient, false);
+              }}
+              onOpenDedicatedRegister={() => setActiveTab('daftar_pesakit')}
               onUpdatePatientPhase={handleUpdatePatientPhase}
               initialShowForm={openRegisterOnPatientsTab}
             />

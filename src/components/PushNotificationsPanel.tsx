@@ -171,7 +171,7 @@ export const PushNotificationsPanel: React.FC<PushNotificationsPanelProps> = ({
                 {activeAlerts.map((alert) => (
                   <li key={alert.id} className="py-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div
                           className={`text-xs font-semibold ${
                             alert.severity === 'segera'

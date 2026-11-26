@@ -36,9 +36,9 @@ const CLINICAL_MODULES: Array<{
   },
   {
     index: '04.',
-    title: 'Notifikasi Push Berkala & Laporan Harian',
+    title: 'OSCA, Push Berkala & Cetak Laporan',
     description:
-      'Peringatan berkala untuk kes tertunggak serta ringkasan syif harian sedia dicetak bagi rujukan kakitangan.',
+      'Penyelarasan kes OSCA bersepadu, peringatan push berkala, serta laporan syif harian sedia dicetak ke PDF.',
   },
 ];
 

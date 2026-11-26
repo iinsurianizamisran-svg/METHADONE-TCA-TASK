@@ -22,21 +22,52 @@ export type TaskPriority = 'biasa' | 'penting' | 'segera';
 
 export type UrineSubstanceResult = 'negatif' | 'positif' | 'tidak_diuji';
 
+export type PatientGender = 'lelaki' | 'perempuan';
+
+export type RegimenType = 'dot' | 'dbb';
+
+export type BloodTestStatus = 'normal' | 'perlu_pemantauan' | 'belum_diambil';
+
+export type LastUrineSummaryStatus = 'patuh' | 'perhatian' | 'belum_diuji';
+
 export interface Patient {
   id: string;
   name: string;
   mrn: string;
   icNumber: string;
   phone: string;
+  // Maklumat Demografik
+  dateOfBirth?: string; // YYYY-MM-DD
+  gender?: PatientGender;
+  ethnicity?: string;
+  address?: string;
+  employmentStatus?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  // Dos & Regimen Metadon (DOT & DBB 1-6 Botol)
   phase: ProtocolPhase;
   doseMg: number;
+  regimenType?: RegimenType;
+  dbbBottles?: number; // 0 for pure DOT, 1..6 for DBB
+  dotDaysPerWeek?: number; // 7 - dbbBottles
   dispensingMode: DispensingMode;
+  prescribingDoctor?: string;
   startDate: string; // YYYY-MM-DD
   nextAppointmentDate: string; // YYYY-MM-DD
   nextAppointmentTime: string; // HH:mm
+  // Protokol Ujian Urin & Rekod Ujian Terakhir
   urineIntervalDays: number;
   urineWindowDays: number;
   lastUrineTestDate?: string; // YYYY-MM-DD
+  lastUrineResult?: LastUrineSummaryStatus;
+  lastBloodTestDate?: string; // YYYY-MM-DD
+  lastBloodTestStatus?: BloodTestStatus;
+  lastBloodTestNote?: string;
+  lastEcgDate?: string; // YYYY-MM-DD
+  qtcMs?: number;
+  drugAllergies?: string;
+  comorbidities?: string;
   clinicalAlertNote?: string;
 }
 

@@ -32,7 +32,7 @@ import {
   shiftMonth,
   WEEKDAY_LABELS_MY,
 } from '../utils/calendarUtils';
-import { formatDateMY } from '../utils/methadoneProtocol';
+import { calculateUrineTestWindow, formatDateMY } from '../utils/methadoneProtocol';
 import { MANUAL_ENTRY_TYPE_LABELS } from '../utils/manualTaskBuilder';
 
 interface CalendarDashboardViewProps {
@@ -351,8 +351,75 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
     agenda.activeUrineWindows.length +
     agenda.urineRecords.length;
 
+  const todayOverview = useMemo(() => {
+    const todayAppointments = appointments.filter((a) => a.date === todayIso);
+    const attendedToday = todayAppointments.filter((a) => a.status === 'hadir').length;
+    const pendingTasks = tasks.filter((t) => !t.completed).length;
+    const activeUrine = patients.filter(
+      (p) => calculateUrineTestWindow(p, todayIso).status === 'dalam_julat'
+    ).length;
+    return {
+      todayApptTotal: todayAppointments.length,
+      attendedToday,
+      pendingTasks,
+      activeUrine,
+      totalPatients: patients.length,
+    };
+  }, [appointments, tasks, patients, todayIso]);
+
   return (
     <div className="space-y-6">
+      {/* Clinic Daily Overview Banner */}
+      <section
+        aria-label="Ringkasan operasi klinik hari ini"
+        className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6"
+      >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 pb-4 border-b border-slate-100">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">
+              Dashboard Kalendar &amp; Jadual Harian Klinik
+            </h1>
+            <p className="text-sm text-slate-600 mt-0.5">
+              Pilih mana-mana tarikh pada kalendar di bawah untuk menyemak, mengesahkan, mengedit atau memadam tugasan, temujanji dan nota.
+            </p>
+          </div>
+          <div className="text-xs text-slate-500 font-mono tabular-nums whitespace-nowrap shrink-0">
+            Hari Ini: {formatDateMY(todayIso)}
+          </div>
+        </div>
+
+        <div className="pt-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <div className="text-xs text-slate-500">Temujanji Hari Ini</div>
+            <div className="mt-1 text-2xl font-bold text-slate-900 font-mono tabular-nums">
+              {todayOverview.attendedToday}/{todayOverview.todayApptTotal}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Telah hadir / dijadualkan</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Tugasan Belum Selesai</div>
+            <div className="mt-1 text-2xl font-bold text-amber-700 font-mono tabular-nums">
+              {todayOverview.pendingTasks}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Perlu pengesahan kakitangan</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Julat Ujian Urin Aktif</div>
+            <div className="mt-1 text-2xl font-bold text-teal-700 font-mono tabular-nums">
+              {todayOverview.activeUrine}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Pesakit dalam tempoh saringan</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Pesakit Metadon Aktif</div>
+            <div className="mt-1 text-2xl font-bold text-slate-900 font-mono tabular-nums">
+              {todayOverview.totalPatients}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Berdaftar di bawah protokol</div>
+          </div>
+        </div>
+      </section>
+
       {/* Main 12-col split: Left 5 cols = Monthly Calendar, Right 7 cols = Selected Date Agenda List */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* Monthly Calendar Card (5 cols) */}
@@ -362,11 +429,11 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
         >
           <div className="flex items-center justify-between gap-2 pb-4 border-b border-slate-100">
             <div>
-              <h1 className="text-lg font-bold text-slate-900">
+              <h2 className="text-lg font-bold text-slate-900">
                 {getMonthTitleMY(viewYear, viewMonth)}
-              </h1>
+              </h2>
               <p className="text-xs text-slate-500">
-                Pilih tarikh untuk mengurus tugasan, temujanji dan nota.
+                Ketik tarikh untuk membuka senarai aktiviti harian.
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -860,8 +927,8 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                             </form>
                           ) : (
                             <>
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-slate-900">
                                     <span>{appt.purpose}</span>
                                     <span aria-hidden="true" className="text-slate-300">
@@ -883,7 +950,7 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                                     <span aria-hidden="true">·</span>
                                     <span>{appt.mrn}</span>
                                     <span aria-hidden="true">·</span>
-                                    <span>Dos {appt.doseMg} mg</span>
+                                    <span className="whitespace-nowrap">Dos {appt.doseMg} mg</span>
                                   </div>
                                   {appt.notes && (
                                     <p className="mt-1 text-xs text-slate-600">{appt.notes}</p>
@@ -891,7 +958,7 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                                 </div>
 
                                 <span
-                                  className={`text-xs font-semibold whitespace-nowrap ${
+                                  className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                                     appt.status === 'hadir'
                                       ? 'text-emerald-700'
                                       : appt.status === 'tidak_hadir'
@@ -1098,8 +1165,8 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                             </form>
                           ) : (
                             <>
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
                                   {(task.entryType || task.orderedBy) && (
                                     <div className="text-xs font-medium text-teal-800 mb-0.5">
                                       {task.entryType
@@ -1145,7 +1212,7 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                                   </div>
                                 </div>
                                 <span
-                                  className={`text-xs font-semibold whitespace-nowrap ${
+                                  className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                                     task.completed ? 'text-emerald-700' : 'text-amber-700'
                                   }`}
                                 >
@@ -1297,8 +1364,8 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                             </form>
                           ) : (
                             <>
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
                                     <FileText className="w-3.5 h-3.5 text-teal-700 shrink-0" aria-hidden="true" />
                                     <span>{note.title}</span>
@@ -1321,7 +1388,7 @@ export const CalendarDashboardView: React.FC<CalendarDashboardViewProps> = ({
                                   </div>
                                 </div>
                                 <span
-                                  className={`text-xs font-semibold whitespace-nowrap ${
+                                  className={`text-xs font-semibold whitespace-nowrap shrink-0 ${
                                     note.verified ? 'text-emerald-700' : 'text-amber-700'
                                   }`}
                                 >

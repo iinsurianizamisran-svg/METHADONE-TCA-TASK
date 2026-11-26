@@ -131,8 +131,11 @@ export const UrineRecordsView: React.FC<UrineRecordsViewProps> = ({
             </p>
           </div>
           <div className="shrink-0">
-            <label htmlFor="urine-patient-select" className="sr-only">
-              Pilih pesakit
+            <label
+              htmlFor="urine-patient-select"
+              className="block text-xs font-medium text-slate-600 mb-1"
+            >
+              Pesakit Saringan
             </label>
             <select
               id="urine-patient-select"
@@ -141,7 +144,7 @@ export const UrineRecordsView: React.FC<UrineRecordsViewProps> = ({
                 onSelectPatient(e.target.value);
                 setSaveBanner('');
               }}
-              className="min-h-[42px] px-3 py-2 text-sm font-medium text-slate-800 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
+              className="w-full sm:w-auto min-h-[42px] px-3 py-2 text-sm font-medium text-slate-800 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
             >
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -219,52 +222,76 @@ export const UrineRecordsView: React.FC<UrineRecordsViewProps> = ({
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            <div>
-              <label htmlFor="urine-test-date" className="block text-xs font-medium text-slate-700 mb-1">
-                Tarikh Ujian Dilaksanakan
-              </label>
-              <input
-                id="urine-test-date"
-                type="date"
-                value={testDate}
-                onChange={(e) => setTestDate(e.target.value)}
-                className="w-full min-h-[42px] px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
-              />
-              <div className="mt-1.5 flex items-center justify-between text-xs">
-                <span
-                  className={
-                    isSelectedDateInWindow
-                      ? 'font-medium text-emerald-700 flex items-center gap-1'
-                      : 'font-medium text-amber-700 flex items-center gap-1'
-                  }
-                >
-                  {isSelectedDateInWindow ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                      Tarikh berada dalam julat protokol automatik
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
-                      Di luar julat protokol ({formatDateMY(urineWindow.windowStart)} –{' '}
-                      {formatDateMY(urineWindow.windowEnd)})
-                    </>
-                  )}
-                </span>
-                {!isSelectedDateInWindow && (
-                  <button
-                    type="button"
-                    onClick={() => setTestDate(urineWindow.windowStart)}
-                    className="text-teal-700 font-medium underline hover:text-teal-800 whitespace-nowrap ml-2"
+          <form onSubmit={handleSubmit} className="mt-4 space-y-5">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                1. Tarikh &amp; Pengesahan Julat
+              </div>
+              <div>
+                <label htmlFor="urine-test-date" className="block text-xs font-medium text-slate-700 mb-1">
+                  Tarikh Ujian Dilaksanakan
+                </label>
+                <input
+                  id="urine-test-date"
+                  type="date"
+                  value={testDate}
+                  onChange={(e) => setTestDate(e.target.value)}
+                  className="w-full min-h-[42px] px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
+                />
+                <div className="mt-1.5 flex items-center justify-between gap-2 text-xs">
+                  <span
+                    className={
+                      isSelectedDateInWindow
+                        ? 'font-medium text-emerald-700 flex items-center gap-1'
+                        : 'font-medium text-amber-700 flex items-center gap-1'
+                    }
                   >
-                    Guna Julat
-                  </button>
-                )}
+                    {isSelectedDateInWindow ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                        Tarikh berada dalam julat protokol automatik
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                        Di luar julat protokol ({formatDateMY(urineWindow.windowStart)} –{' '}
+                        {formatDateMY(urineWindow.windowEnd)})
+                      </>
+                    )}
+                  </span>
+                  {!isSelectedDateInWindow && (
+                    <button
+                      type="button"
+                      onClick={() => setTestDate(urineWindow.windowStart)}
+                      className="text-teal-700 font-medium underline hover:text-teal-800 whitespace-nowrap shrink-0"
+                    >
+                      Guna Julat
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  2. Keputusan Saringan Bahan
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMethadoneMetabolite('positif');
+                    setMorphine('negatif');
+                    setAmphetamine('negatif');
+                    setThc('negatif');
+                    setBenzodiazepine('negatif');
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-medium text-teal-800 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors whitespace-nowrap"
+                >
+                  Set Semua Patuh
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label
                   htmlFor="urine-methadone"
@@ -370,23 +397,28 @@ export const UrineRecordsView: React.FC<UrineRecordsViewProps> = ({
                   ))}
                 </select>
               </div>
+              </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="urine-recorded-by"
-                className="block text-xs font-medium text-slate-700 mb-1"
-              >
-                Direkod Oleh Kakitangan
-              </label>
-              <input
-                id="urine-recorded-by"
-                type="text"
-                value={recordedBy}
-                onChange={(e) => setRecordedBy(e.target.value)}
-                className="w-full min-h-[40px] px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
-              />
-            </div>
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                3. Nota Klinikal &amp; Pengesahan
+              </div>
+              <div>
+                <label
+                  htmlFor="urine-recorded-by"
+                  className="block text-xs font-medium text-slate-700 mb-1"
+                >
+                  Direkod Oleh Kakitangan
+                </label>
+                <input
+                  id="urine-recorded-by"
+                  type="text"
+                  value={recordedBy}
+                  onChange={(e) => setRecordedBy(e.target.value)}
+                  className="w-full min-h-[40px] px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
+                />
+              </div>
 
             <div>
               <label
@@ -403,6 +435,7 @@ export const UrineRecordsView: React.FC<UrineRecordsViewProps> = ({
                 placeholder="Cth: Suhu sampel 36.5°C, diselia oleh kakitangan, pesakit patuh kepada jadual."
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
               />
+            </div>
             </div>
 
             {formError && (
